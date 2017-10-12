@@ -37,6 +37,7 @@ public class Server implements Config {
 			String password = prop.getProperty("password");
 			String url = prop.getProperty("url");
 
+			// create replication connection
 			Properties props = new Properties();
 			PGProperty.USER.set(props, user);
 			PGProperty.PASSWORD.set(props, password);
@@ -47,19 +48,13 @@ public class Server implements Config {
 			Connection conn = DriverManager.getConnection(url, props);
 			PGConnection replConnection = conn.unwrap(PGConnection.class);
 
-			// replConnection.getReplicationAPI()
-			// .createReplicationSlot()
-			// .logical()
-			// .withSlotName("demo_logical_slot")
-			// .withOutputPlugin("test_decoding")
-			// .make();
 
-			// some changes after create replication slot to demonstrate receive
-			// it
 			Connection con = getConnection();
 
 			String replicationSlot = System.getProperty("replicationSlot");
-
+			
+			
+			//create replication stream
 			PGReplicationStream stream = replConnection.getReplicationAPI().replicationStream().logical()
 					.withSlotName(replicationSlot).withSlotOption("include-xids", true)
 					.withSlotOption("include-timestamp", "on").withSlotOption("skip-empty-xacts", true)
@@ -84,6 +79,7 @@ public class Server implements Config {
 			while (sessionEndTime > System.currentTimeMillis()) {
 				// non blocking receive message
 
+				//read from stream (reads one record at a time)
 				ByteBuffer msg = stream.readPending();
 
 				if (msg == null) {
@@ -142,6 +138,7 @@ public class Server implements Config {
 					line = reader.readLine();
 					
 				}
+				// notify succesfully read sequence number
 				stream.setAppliedLSN(stream.getLastReceiveLSN());
 				stream.setFlushedLSN(stream.getLastReceiveLSN());
 			}
